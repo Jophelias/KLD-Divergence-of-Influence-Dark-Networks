@@ -1,0 +1,86 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+r*. 
+
+
+
+```{r setup, include=FALSE}
+library(dplyr)
+library(ggplot2)
+library(data.table)
+library(scales)
+library(RColorBrewer)
+library(stargazer)
+library(fitdistrplus)
+library(MASS)
+```
+
+
+```{r}
+
+n <- 1
+final.approx <- NULL
+
+while(n < 20){
+approx.1 <- (((2*pi*n)^.5)*(n/exp(1))^n) / (2 * ((((2*pi*(n-2))^.5)*((n-2)/exp(1))^(n-2))))
+approx.2 <- (((2*pi*n)^.5)*(n/exp(1))^n) / (24 * ((((2*pi*(n-4))^.5)*((n-4)/exp(1))^(n-4))))
+
+n <- n + 1
+
+final.approx <- append(final.approx, exp(approx.1 - approx.2))
+
+}
+
+my.df <- data.frame(1:19, as.vector(final.approx))
+
+combin.plot <- ggplot(my.df) + geom_point(aes(x=X1.19, y=as.vector.final.approx.))  + scale_y_log10("Ratio", breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x))) + scale_x_continuous("N", breaks = 1:20, labels = 1:20) + theme(plot.title = element_text("Cumulative Distribution Function"), text = element_text(size = 14)) + theme_bw()
+
+ggsave(plot = combin.plot , "ratio.plot.png", dpi = 600, width = 4,  height = 3.5, units = 'in')
+
+```
+
+```{r}
+
+#I think maybe the numbers were reversed
+
+n <- 1
+final.approx.1 <- NULL
+
+while(n < 20){
+approx.1.1 <- (((2*pi*n)^.5)*(n/exp(1))^n) / (2 * ((((2*pi*n-2)^.5)*((n-2)/exp(1))^(n-2))))
+approx.2.1 <- (((2*pi*n)^.5)*(n/exp(1))^n) / (24 * ((((2*pi*n-4)^.5)*((n-4)/exp(1))^(n-4))))
+
+n <- n + 1
+
+final.approx.1 <- append(final.approx.1, exp(approx.2.1 - approx.1.1))
+}
+
+# No they werent.
+
+```
+
+```{r}
+
+for (x in 1:20) {
+  
+  easy.approx <- choose(x, 2) - choose(x, 4)
+  easy.final <- exp(easy.approx)
+  print(easy.final)
+  
+}
+
+
+for (x in 1:100) {
+  
+  choosing.2 <- choose(x, 2) 
+  choosing.4 <- choose(x, 4)
+  
+  print(paste0("choose 2 ,",choosing.2))
+  print( paste0("choose 4 ,",choosing.4 ))
+  
+}
+
+
+```

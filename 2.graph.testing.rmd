@@ -1,0 +1,126 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+library(dplyr)
+library(ggplot2)
+library(data.table)
+library(scales)
+library(RColorBrewer)
+library(stargazer)
+library(fitdistrplus)
+library(MASS)
+library(igraph)
+library(FNN) # for KL divergence turns out this implements it on a network. hard to understand
+library(LaplacesDemon) #this is to calculate the KL divergence. Super simple.
+library(networkDynamic) #this is so I can visualize the graph in a movie form
+library(animation)
+library(magick)
+library(gifski)
+```
+
+
+```{r}
+
+ring.graph <- sample_k_regular(50, 3)
+plot(ring.graph)
+
+closeness.dist <- closeness(ring.graph, normalized = T)
+new.ring.graph <- rewire(ring.graph, with = keeping_degseq(niter = 1))
+new.closeness.dist <- closeness(new.ring.graph, normalized = T)
+
+the.divergence <- KLD(closeness.dist, new.closeness.dist, exp(1))
+
+plot(ring.graph)
+plot(new.ring.graph)
+
+
+```
+
+```{r}
+
+#LEt's try to animate
+
+
+# Set Output for each frame 
+png(file="network.movie/output_%03d.png", width=800,height=450)
+ring.graph <- sample_k_regular(100, 2)
+new.ring.graph <- ring.graph
+layout.old <- layout_nicely(new.ring.graph)
+the.divergence <- NULL
+
+set_time <- 1000
+
+#Time loop starts
+for(time in seq(1, set_time, 1)){   #dt is the defined interval between successive plots
+  
+  closeness.dist <- closeness(new.ring.graph, normalized = T)
+  new.ring.graph <- rewire(new.ring.graph, with = keeping_degseq(niter = 1)) 
+  new.closeness.dist <- closeness(new.ring.graph, normalized = T)
+  temp.kld <- KLD(closeness.dist, new.closeness.dist, exp(1))
+  the.divergence <- c(the.divergence, temp.kld$KLD.px.py)
+
+  layout.new <- layout_with_fr(new.ring.graph,coords=layout.old,niter=10,start.temp=0.05,grid="nogrid") #jitter layout
+
+  plot(new.ring.graph,layout=layout.new,vertex.label="",vertex.size=1+2*log(degree(new.ring.graph)),
+       vertex.frame.color=V(ring.graph)$color,edge.width=1.5,asp=9/16,margin=-0.15) #make plot
+
+  layout.old <- layout.new #keep layout for next image
+}
+
+png_files <- sprintf("network.movie/output_%03d.png", 1:set_time)
+gif_file <- "100n2e1000i0.5.gif"
+gifski(png_files, gif_file, delay = 0.1)
+
+
+```
+```{r}
+
+#Now for the Zack Karate Club
+
+
+# Set Output for each frame 
+png(file="network.movie/zack.output_%03d.png", width=800,height=450)
+zack <- graph("Zachary")
+new.zack <- zack
+layout.old <- layout_nicely(new.zack)
+the.divergence <- NULL
+
+set_time <- 1000
+
+#Time loop starts
+for(time in seq(1, set_time, 1)){   #dt is the defined interval between successive plots
+  
+  closeness.dist <- closeness(new.zack, normalized = T)
+  new.zack <- rewire(new.zack, with = keeping_degseq(niter = 1)) 
+  new.closeness.dist <- closeness(new.zack, normalized = T)
+  temp.kld <- KLD(closeness.dist, new.closeness.dist, exp(1))
+  the.divergence <- c(the.divergence, temp.kld$sum.KLD.px.py)
+
+  layout.new <- layout_with_fr(new.zack,coords=layout.old,niter=10,start.temp=0.05,grid="nogrid") #jitter layout
+
+  plot(new.zack,layout=layout.new,vertex.label="",vertex.size=1+2*log(degree(new.zack)),
+       vertex.frame.color=V(zack)$color,edge.width=1.5,asp=9/16,margin=-0.15) #make plot
+
+  layout.old <- layout.new #keep layout for next image
+}
+
+png_files <- sprintf("network.movie/zack.output_%03d.png", 1:set_time)
+gif_file <- "zack1000i0.5.gif"
+gifski(png_files, gif_file, delay = 0.1)
+
+divergence.histogram <- hist(the.divergence)
+zack.closness.bro <- closeness(zack)
+cacl.close.hist <- hist(zack.closness.bro)
+
+divergence.plt <- ggplot() + geom_point(aes(x=divergence.histogram$mids, y=divergence.histogram$counts))  + scale_x_log10("KL Divergence (bits)", breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x))) + annotation_logticks(sides = c('b','l')) + scale_y_log10("Frequency (in number of configurations sampled)", breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x))) + theme_light()
+
+ggsave(plot = divergence.plt, "karate.club.divergence.plot.png", dpi = 600, width = 5,  height = 5, units = 'in')
+
+closeness.plt <- ggplot() + geom_point(aes(x=cacl.close.hist$mids, y=cacl.close.hist$counts), shape = 3)  + scale_x_continuous("Closeness Centrality (normalized)", breaks = pretty_breaks()) + scale_y_continuous("Frequency (nodes)", breaks = pretty_breaks()) + theme_light()
+
+ggsave(plot = closeness.plt, "karate.club.closness.plot.png", dpi = 600, width = 5,  height = 5, units = 'in')
+
+```
